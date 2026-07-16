@@ -82,7 +82,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-white/[0.08] bg-surface-2/80 p-5 shadow-card backdrop-blur-sm ${className}`}
+      className={`rounded-2xl border border-white/[0.08] bg-surface-2 p-5 shadow-card ${className}`}
     >
       {children}
     </div>
@@ -130,7 +130,7 @@ export function Modal({
   if (!open) return null
   return (
     <div
-      className="animate-fade fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-md"
+      className="animate-fade fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-4"
       onClick={onClose}
     >
       <div
