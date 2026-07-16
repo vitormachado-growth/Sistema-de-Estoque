@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Product, StockMovement } from '../types/database'
 import { brl, formatDateTime, movementLabel } from '../lib/format'
-import { Badge, Card, Spinner, EmptyState } from '../components/ui'
+import { Badge, Button, Card, Spinner, EmptyState } from '../components/ui'
 import PageHeader from '../components/PageHeader'
 
 interface MovementWithProduct extends StockMovement {
@@ -14,10 +14,13 @@ export default function Dashboard() {
   const [products, setProducts] = useState<Product[]>([])
   const [movements, setMovements] = useState<MovementWithProduct[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
-  useEffect(() => {
-    ;(async () => {
-      const [{ data: prods }, { data: movs }] = await Promise.all([
+  const load = async () => {
+    setLoading(true)
+    setError(false)
+    try {
+      const [prodRes, movRes] = await Promise.all([
         supabase.from('products').select('*').eq('active', true),
         supabase
           .from('stock_movements')
@@ -25,13 +28,23 @@ export default function Dashboard() {
           .order('created_at', { ascending: false })
           .limit(8),
       ])
-      setProducts(prods ?? [])
-      setMovements((movs as MovementWithProduct[]) ?? [])
+      if (prodRes.error || movRes.error) throw prodRes.error ?? movRes.error
+      setProducts(prodRes.data ?? [])
+      setMovements((movRes.data as MovementWithProduct[]) ?? [])
+    } catch {
+      setError(true)
+    } finally {
       setLoading(false)
-    })()
+    }
+  }
+
+  useEffect(() => {
+    load()
   }, [])
 
   if (loading) return <Spinner />
+
+  if (error) return <ConnectionError onRetry={load} />
 
   const totalProducts = products.length
   const totalUnits = products.reduce((s, p) => s + p.quantity, 0)
@@ -167,6 +180,30 @@ export default function Dashboard() {
             </ul>
           )}
         </Card>
+      </div>
+    </div>
+  )
+}
+
+function ConnectionError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="max-w-md rounded-2xl border border-amber-500/30 bg-surface-2/80 p-6 text-center shadow-pop">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 text-3xl">
+          📡
+        </div>
+        <h2 className="text-lg font-semibold text-zinc-100">
+          Não foi possível conectar
+        </h2>
+        <p className="mt-2 text-sm text-zinc-400">
+          O banco de dados (Supabase) não respondeu. Isso costuma acontecer
+          quando o projeto está <strong>pausado</strong> (plano gratuito) ou
+          fora do ar. Verifique no painel do Supabase se o projeto está ativo e
+          tente de novo.
+        </p>
+        <Button className="mx-auto mt-4" onClick={onRetry}>
+          Tentar novamente
+        </Button>
       </div>
     </div>
   )
